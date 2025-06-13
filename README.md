@@ -201,3 +201,8 @@ Comparing Instructions: 7 instructions
 Function Call Instructions: 0 instructions
 
 ```
+
+
+## Conclusion
+
+By forcing all call instructions in assembly to be inlined, the corresponding functions are inserted directly into the code. This increases the code size but improves performance by eliminating function call overhead.
