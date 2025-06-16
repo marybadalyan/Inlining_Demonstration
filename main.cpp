@@ -14,6 +14,8 @@ namespace Color {
     const char* BOLD_MAGENTA = "\033[1;35m";
 }
 
+
+// Optimizartion cam also aid in loop unrolling 
 FORCE_INLINE int64_t sum_array(int32_t* a, int size) {
     int64_t sum = 0;
     for (int i = 0; i < size; ++i) {
@@ -22,7 +24,6 @@ FORCE_INLINE int64_t sum_array(int32_t* a, int size) {
     return sum;
 }
 
-// CORRECTED: This function now returns a value to prevent the compiler
 // from optimizing away the calls to sum_array.
 int64_t run(int32_t* a, int size) {
     int64_t total_sum = 0;
@@ -82,52 +83,51 @@ int main(int argc, char* argv[]) {
         const std::string mangledSumArrayName = "_Z9sum_arrayPii";       // GCC/Clang name
     #endif
 
-    // Make sure mangledSumArrayName is defined before this loop!
+   
 
-std::string line;
-bool inRunFunc = false;
-int count = 0;
-int call_count = 0;
-int compare_count = 0; // Separate counters for clarity
-int jump_count = 0;
+    std::string line;
+    bool inRunFunc = false;
+    int count = 0;
+    int call_count = 0;
+    int compare_count = 0; // Separate counters for clarity
+    int jump_count = 0;
 
-while (std::getline(asmFile, line)) {
-    if (!inRunFunc) {
-        if (line.find(mangledRunName) != std::string::npos) {
-            inRunFunc = true;
-            std::cout << "\n--- Assembly for run() ---" << std::endl;
-        }
-    } else {
-        if (line.empty() || line.find("ENDP") != std::string::npos || line.find(".cfi_endproc") != std::string::npos) {
-            break;
-        }
-        if (!line.empty() && (line[0] == '\t' || line[0] == ' ')) {
-            std::cout << line << std::endl;
-            count++;
-
-            // Count compare instructions
-            if (line.find("cmp") != std::string::npos) {
-                compare_count++;
+    while (std::getline(asmFile, line)) {
+        if (!inRunFunc) {
+            if (line.find(mangledRunName) != std::string::npos) {
+                inRunFunc = true;
+                std::cout << "\n--- Assembly for run() ---" << std::endl;
             }
-            // Count jump instructions
-            if (line.find("\tj") != std::string::npos) { // Check for tab + j
-                jump_count++;
+        } else {
+            if (line.empty() || line.find("ENDP") != std::string::npos || line.find(".cfi_endproc") != std::string::npos) {
+                break;
             }
+            if (!line.empty() && (line[0] == '\t' || line[0] == ' ')) {
+                std::cout << line << std::endl;
+                count++;
 
-            // Find and categorize call instructions
-            if (line.find("call") != std::string::npos) {
-                call_count++;
-
-                // *** THE CRITICAL FIX IS HERE ***
-                if (line.find(mangledSumArrayName) != std::string::npos) {
-                    // It's a call to our specific function
-                    std::cout << Color::BOLD_CYAN << "\t^---- Call to sum_array" << Color::RESET << std::endl;
+                // Count compare instructions
+                if (line.find("cmp") != std::string::npos) {
+                    compare_count++;
                 }
-                // You can add other else-if branches here if you want to track other specific calls
+                // Count jump instructions
+                if (line.find("\tj") != std::string::npos) { // Check for tab + j
+                    jump_count++;
+                }
+
+                // Find and categorize call instructions
+                if (line.find("call") != std::string::npos) {
+                    call_count++;
+
+                    if (line.find(mangledSumArrayName) != std::string::npos) {
+                    
+                        std::cout << Color::BOLD_CYAN << "\t^---- Call to sum_array" << Color::RESET << std::endl;
+                    }
+                
+                }
             }
         }
     }
-}
     asmFile.close();
 
     std::cout << "--- End of Assembly ---\n" << std::endl;
